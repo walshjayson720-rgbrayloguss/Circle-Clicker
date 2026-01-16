@@ -6,16 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-:root {
+:root{
   --bg:#0e0f13;
   --panel:#171922;
-  --accent:#4f8cff;
   --text:#eaeaf0;
 }
 
-* { box-sizing:border-box; user-select:none; }
+*{box-sizing:border-box;user-select:none}
 
-body {
+body{
   margin:0;
   height:100vh;
   display:flex;
@@ -25,7 +24,7 @@ body {
 }
 
 /* SHOP */
-#shop {
+#shop{
   width:300px;
   background:var(--panel);
   padding:20px;
@@ -35,36 +34,24 @@ body {
   border-right:1px solid #222;
 }
 
-#shop h2 {
-  margin:0 0 10px;
-  font-weight:600;
-}
-
-.upgrade {
+.upgrade{
   background:#1f2230;
   padding:14px;
   border-radius:12px;
   cursor:pointer;
-  transition:background .2s, transform .15s;
+  transition:.2s;
 }
 
-.upgrade:hover {
-  background:#2a2e42;
-  transform:translateY(-2px);
-}
+.upgrade.affordable{ box-shadow:0 0 12px rgba(80,200,255,.6); }
+.upgrade.denied{ background:#402020; }
 
-.upgrade strong {
-  display:block;
-}
+.upgrade:hover{ background:#2a2e42; }
 
-.upgrade small {
-  display:block;
-  opacity:.7;
-  margin-top:4px;
-}
+.upgrade strong{ display:block; }
+.upgrade small{ opacity:.7; }
 
 /* GAME */
-#game {
+#game{
   flex:1;
   display:flex;
   flex-direction:column;
@@ -72,15 +59,11 @@ body {
   justify-content:center;
   gap:25px;
   position:relative;
-  overflow:hidden;
 }
 
-#count {
-  font-size:36px;
-  font-weight:600;
-}
+#count{ font-size:36px; }
 
-#circle {
+#circle{
   width:220px;
   height:220px;
   border-radius:50%;
@@ -88,61 +71,45 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:22px;
   cursor:pointer;
-  transition:transform .4s ease;
+  transition:transform .4s;
 }
 
 /* PARTICLES */
-.particle {
+.particle{
   position:absolute;
   pointer-events:none;
-  color:white;
-  font-size:14px;
-  animation: float .8s forwards;
+  animation:float .8s forwards;
 }
 
-@keyframes float {
-  to {
-    transform:translateY(-40px);
-    opacity:0;
-  }
+@keyframes float{
+  to{ transform:translateY(-40px); opacity:0; }
 }
 </style>
 </head>
 <body>
 
 <div id="shop">
-  <h2>Shop</h2>
-
-  <div class="upgrade" onclick="buyAuto()">
-    <strong id="autoTitle"></strong>
-    <small>+0.5 per second</small>
+  <div class="upgrade" onclick="buy(auto)">
+    <strong id="autoT"></strong><small>+0.5 / sec</small>
   </div>
-
-  <div class="upgrade" onclick="buyMulti()">
-    <strong id="multiTitle"></strong>
-    <small>+1 per click</small>
+  <div class="upgrade" onclick="buy(multi)">
+    <strong id="multiT"></strong><small>+1 click</small>
   </div>
-
-  <div class="upgrade" onclick="buyFaster()">
-    <strong id="speedTitle"></strong>
-    <small>Auto speed +20%</small>
+  <div class="upgrade" onclick="buy(pulse)">
+    <strong id="pulseT"></strong><small>+5 click</small>
   </div>
-
-  <div class="upgrade" onclick="buyPulse()">
-    <strong id="pulseTitle"></strong>
-    <small>+5 per click</small>
+  <div class="upgrade" onclick="buy(mega)">
+    <strong id="megaT"></strong><small>+10 click</small>
   </div>
-
-  <div class="upgrade" onclick="buyCrit()">
-    <strong id="critTitle"></strong>
-    <small>Chance to double click value</small>
+  <div class="upgrade" onclick="buy(crit)">
+    <strong id="critT"></strong><small>Crit chance</small>
   </div>
-
-  <div class="upgrade" onclick="prestige()">
-    <strong>Prestige (1000)</strong>
-    <small>Permanent bonus reset</small>
+  <div class="upgrade" onclick="buy(critPower)">
+    <strong id="critPT"></strong><small>Crit x3</small>
+  </div>
+  <div class="upgrade" onclick="buy(autoMulti)">
+    <strong id="autoMT"></strong><small>Autos stronger</small>
   </div>
 </div>
 
@@ -152,147 +119,83 @@ body {
 </div>
 
 <script>
-/* ELEMENTS */
-const countEl = document.getElementById("count");
-const circle = document.getElementById("circle");
-
-const autoTitle  = document.getElementById("autoTitle");
-const multiTitle = document.getElementById("multiTitle");
-const speedTitle = document.getElementById("speedTitle");
-const pulseTitle = document.getElementById("pulseTitle");
-const critTitle  = document.getElementById("critTitle");
-
-/* GAME STATE */
-let points=0, perClick=1, autoRate=0.5, autoSpeed=1000;
-let pulseBonus=0, critChance=0, prestigeBonus=1;
-
-let autoCost=20, multiCost=50, speedCost=120, pulseCost=250, critCost=400;
-
-/* LOAD */
-if(localStorage.save){
-  Object.assign(window, JSON.parse(localStorage.save));
+/* FORMAT NUMBERS */
+function format(n){
+  if(n < 1e6) return Math.floor(n).toLocaleString();
+  const u=["","K","M","B","T","Qa","Qi"];
+  let i=Math.floor(Math.log10(n)/3);
+  return (n/10**(i*3)).toFixed(2)+u[i];
 }
 
-/* SAVE */
-function save(){
-  localStorage.save = JSON.stringify({
-    points, perClick, autoRate, autoSpeed,
-    pulseBonus, critChance, prestigeBonus,
-    autoCost, multiCost, speedCost, pulseCost, critCost
-  });
-}
+/* STATE */
+let points=0, perClick=1, autoRate=.5;
+let critChance=0, critMult=2, autoMult=1;
+
+/* UPGRADES */
+const auto={cost:20, buy(){autoRate+=.5;this.cost*=1.6}};
+const multi={cost:50, buy(){perClick+=1;this.cost*=1.7}};
+const pulse={cost:250,buy(){perClick+=5;this.cost*=2}};
+const mega={cost:800,buy(){perClick+=10;this.cost*=2.2}};
+const crit={cost:400,buy(){critChance+=.05;this.cost*=2}};
+const critPower={cost:1500,buy(){critMult=3;this.cost*=3}};
+const autoMulti={cost:2000,buy(){autoMult+=.5;this.cost*=2.5}};
+
+const upgrades=[auto,multi,pulse,mega,crit,critPower,autoMulti];
+const titles=[
+  autoT,multiT,pulseT,megaT,critT,critPT,autoMT
+];
 
 /* UPDATE */
 function update(){
-  countEl.textContent = Math.floor(points);
-  autoTitle.textContent  = `Auto Clicker (${autoCost})`;
-  multiTitle.textContent = `Click Multiplier (${multiCost})`;
-  speedTitle.textContent = `Faster Autos (${speedCost})`;
-  pulseTitle.textContent = `Pulse Boost (${pulseCost})`;
-  critTitle.textContent  = `Critical Clicks (${critCost})`;
-  save();
+  count.textContent=format(points);
+  upgrades.forEach((u,i)=>{
+    titles[i].textContent=`${titles[i].id.replace("T","")} (${format(u.cost)})`;
+    titles[i].parentElement.classList.toggle("affordable",points>=u.cost);
+  });
+}
+
+/* BUY */
+function buy(u){
+  if(points<u.cost){
+    event.currentTarget.classList.add("denied");
+    setTimeout(()=>event.currentTarget.classList.remove("denied"),150);
+    return;
+  }
+  points-=u.cost;
+  u.buy();
+  update();
 }
 
 /* CLICK */
-circle.onclick = e => {
-  let gain=(perClick+pulseBonus)*prestigeBonus;
-  if(Math.random()<critChance) gain*=2;
+circle.onclick=e=>{
+  let gain=perClick;
+  if(Math.random()<critChance) gain*=critMult;
   points+=gain;
-  animateCircle();
-  particle("+"+Math.floor(gain),e.clientX,e.clientY);
+  animate();
+  particle("+"+format(gain),e.clientX,e.clientY);
   update();
 };
 
-function animateCircle(){
-  circle.style.transform="scale(1.15)";
-  setTimeout(()=>{
-    circle.style.transform="scale(1)";
-    setTimeout(()=>{
-      circle.style.transform="scale(1.2)";
-      setTimeout(()=>circle.style.transform="scale(1)",400);
-    },50);
-  },400);
+function animate(){
+  circle.style.transform="scale(1.2)";
+  setTimeout(()=>circle.style.transform="scale(1)",400);
 }
 
-function particle(text,x,y){
+function particle(t,x,y){
   const p=document.createElement("div");
   p.className="particle";
-  p.textContent=text;
+  p.textContent=t;
   p.style.left=x+"px";
   p.style.top=y+"px";
-  document.body.appendChild(p);
+  game.appendChild(p);
   setTimeout(()=>p.remove(),800);
 }
 
-/* AUTO LOOP */
-let autoLoop=setInterval(()=>{
-  points+=autoRate*prestigeBonus;
+/* AUTO */
+setInterval(()=>{
+  points+=autoRate*autoMult;
   update();
-},autoSpeed);
-
-/* UPGRADES */
-function buyAuto(){
-  if(points<autoCost)return;
-  points-=autoCost;
-  autoRate+=0.5;
-  autoCost=Math.floor(autoCost*1.6);
-  update();
-}
-
-function buyMulti(){
-  if(points<multiCost)return;
-  points-=multiCost;
-  perClick++;
-  multiCost=Math.floor(multiCost*1.7);
-  update();
-}
-
-function buyFaster(){
-  if(points<speedCost)return;
-  points-=speedCost;
-  autoSpeed*=0.8;
-  clearInterval(autoLoop);
-  autoLoop=setInterval(()=>{
-    points+=autoRate*prestigeBonus;
-    update();
-  },autoSpeed);
-  speedCost=Math.floor(speedCost*1.8);
-  update();
-}
-
-function buyPulse(){
-  if(points<pulseCost)return;
-  points-=pulseCost;
-  pulseBonus+=5;
-  pulseCost=Math.floor(pulseCost*2);
-  update();
-}
-
-function buyCrit(){
-  if(points<critCost)return;
-  points-=critCost;
-  critChance+=0.05;
-  critCost=Math.floor(critCost*2);
-  update();
-}
-
-/* PRESTIGE */
-function prestige(){
-  if(points<1000)return;
-  prestigeBonus+=0.5;
-  points=0;
-  perClick=1;
-  autoRate=0.5;
-  pulseBonus=0;
-  critChance=0;
-  autoSpeed=1000;
-  clearInterval(autoLoop);
-  autoLoop=setInterval(()=>{
-    points+=autoRate*prestigeBonus;
-    update();
-  },autoSpeed);
-  update();
-}
+},1000);
 
 update();
 </script>
