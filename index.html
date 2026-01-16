@@ -155,46 +155,58 @@ body {
 </div>
 
 <script>
+/* ELEMENTS */
+const countEl = document.getElementById("count");
+const circle = document.getElementById("circle");
+
+const autoCostEl  = document.getElementById("autoCost");
+const multiCostEl = document.getElementById("multiCost");
+const speedCostEl = document.getElementById("speedCost");
+const pulseCostEl = document.getElementById("pulseCost");
+const critCostEl  = document.getElementById("critCost");
+
+/* GAME STATE */
 let points=0, perClick=1, autoRate=0.5, autoSpeed=1000;
 let pulseBonus=0, critChance=0, prestigeBonus=1;
 
 let autoCost=20, multiCost=50, speedCost=120, pulseCost=250, critCost=400;
 
-const countEl=document.getElementById("count");
-const circle=document.getElementById("circle");
-
-/* LOAD */
+/* LOAD SAVE */
 if(localStorage.save){
-  Object.assign(window,JSON.parse(localStorage.save));
+  Object.assign(window, JSON.parse(localStorage.save));
 }
 
+/* SAVE */
 function save(){
-  localStorage.save=JSON.stringify({
-    points,perClick,autoRate,autoSpeed,
-    pulseBonus,critChance,prestigeBonus,
-    autoCost,multiCost,speedCost,pulseCost,critCost
+  localStorage.save = JSON.stringify({
+    points, perClick, autoRate, autoSpeed,
+    pulseBonus, critChance, prestigeBonus,
+    autoCost, multiCost, speedCost, pulseCost, critCost
   });
 }
 
+/* UPDATE UI */
 function update(){
-  countEl.textContent=Math.floor(points);
-  autoCostEl.textContent="Cost: "+autoCost;
-  multiCostEl.textContent="Cost: "+multiCost;
-  speedCostEl.textContent="Cost: "+speedCost;
-  pulseCostEl.textContent="Cost: "+pulseCost;
-  critCostEl.textContent="Cost: "+critCost;
+  countEl.textContent = Math.floor(points);
+  autoCostEl.textContent  = "Cost: " + autoCost;
+  multiCostEl.textContent = "Cost: " + multiCost;
+  speedCostEl.textContent = "Cost: " + speedCost;
+  pulseCostEl.textContent = "Cost: " + pulseCost;
+  critCostEl.textContent  = "Cost: " + critCost;
   save();
 }
 
-circle.onclick=e=>{
-  let gain=(perClick+pulseBonus)*prestigeBonus;
-  if(Math.random()<critChance) gain*=2;
-  points+=gain;
+/* CLICK */
+circle.onclick = e => {
+  let gain = (perClick + pulseBonus) * prestigeBonus;
+  if(Math.random() < critChance) gain *= 2;
+  points += gain;
   animateCircle();
-  particle("+"+Math.floor(gain),e.clientX,e.clientY);
+  spawnParticle("+" + Math.floor(gain), e.clientX, e.clientY);
   update();
 };
 
+/* CIRCLE ANIMATION */
 function animateCircle(){
   circle.style.transform="scale(1.15)";
   setTimeout(()=>{
@@ -206,7 +218,8 @@ function animateCircle(){
   },400);
 }
 
-function particle(text,x,y){
+/* PARTICLES */
+function spawnParticle(text,x,y){
   const p=document.createElement("div");
   p.className="particle";
   p.textContent=text;
@@ -217,67 +230,72 @@ function particle(text,x,y){
 }
 
 /* AUTO LOOP */
-let autoLoop=setInterval(()=>{
-  points+=autoRate*prestigeBonus;
+let autoLoop = setInterval(()=>{
+  points += autoRate * prestigeBonus;
   update();
-},autoSpeed);
+}, autoSpeed);
 
 /* UPGRADES */
 function buyAuto(){
-  if(points<autoCost)return;
-  points-=autoCost;
-  autoRate+=0.5;
-  autoCost=Math.floor(autoCost*1.6);
+  if(points < autoCost) return;
+  points -= autoCost;
+  autoRate += 0.5;
+  autoCost = Math.floor(autoCost * 1.6);
   update();
 }
 
 function buyMulti(){
-  if(points<multiCost)return;
-  points-=multiCost;
+  if(points < multiCost) return;
+  points -= multiCost;
   perClick++;
-  multiCost=Math.floor(multiCost*1.7);
+  multiCost = Math.floor(multiCost * 1.7);
   update();
 }
 
 function buyFaster(){
-  if(points<speedCost)return;
-  points-=speedCost;
-  autoSpeed*=0.8;
+  if(points < speedCost) return;
+  points -= speedCost;
+  autoSpeed *= 0.8;
   clearInterval(autoLoop);
-  autoLoop=setInterval(()=>{
-    points+=autoRate*prestigeBonus;
+  autoLoop = setInterval(()=>{
+    points += autoRate * prestigeBonus;
     update();
-  },autoSpeed);
-  speedCost=Math.floor(speedCost*1.8);
+  }, autoSpeed);
+  speedCost = Math.floor(speedCost * 1.8);
   update();
 }
 
 function buyPulse(){
-  if(points<pulseCost)return;
-  points-=pulseCost;
-  pulseBonus+=5;
-  pulseCost=Math.floor(pulseCost*2);
+  if(points < pulseCost) return;
+  points -= pulseCost;
+  pulseBonus += 5;
+  pulseCost = Math.floor(pulseCost * 2);
   update();
 }
 
 function buyCrit(){
-  if(points<critCost)return;
-  points-=critCost;
-  critChance+=0.05;
-  critCost=Math.floor(critCost*2);
+  if(points < critCost) return;
+  points -= critCost;
+  critChance += 0.05;
+  critCost = Math.floor(critCost * 2);
   update();
 }
 
 /* PRESTIGE */
 function prestige(){
-  if(points<1000)return;
-  prestigeBonus+=0.5;
-  points=0;
-  perClick=1;
-  autoRate=0.5;
-  pulseBonus=0;
-  critChance=0;
-  autoSpeed=1000;
+  if(points < 1000) return;
+  prestigeBonus += 0.5;
+  points = 0;
+  perClick = 1;
+  autoRate = 0.5;
+  pulseBonus = 0;
+  critChance = 0;
+  autoSpeed = 1000;
+  clearInterval(autoLoop);
+  autoLoop = setInterval(()=>{
+    points += autoRate * prestigeBonus;
+    update();
+  }, autoSpeed);
   update();
 }
 
