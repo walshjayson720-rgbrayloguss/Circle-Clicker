@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pulse Clicker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root {
+  --bg:#0e0f13;
+  --panel:#171922;
+  --accent:#4f8cff;
+  --text:#eaeaf0;
+}
+
+* { box-sizing:border-box; user-select:none; }
+
+body {
+  margin:0;
+  height:100vh;
+  display:flex;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,Arial,sans-serif;
+}
+
+/* SHOP */
+#shop {
+  width:300px;
+  background:var(--panel);
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+  border-right:1px solid #222;
+}
+
+#shop h2 {
+  margin:0 0 10px;
+  font-weight:600;
+}
+
+.upgrade {
+  background:#1f2230;
+  padding:14px;
+  border-radius:12px;
+  cursor:pointer;
+  transition:background .2s, transform .15s;
+}
+
+.upgrade:hover {
+  background:#2a2e42;
+  transform:translateY(-2px);
+}
+
+.upgrade small {
+  display:block;
+  opacity:.7;
+  margin-top:4px;
+}
+
+/* GAME */
+#game {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:25px;
+  position:relative;
+  overflow:hidden;
+}
+
+#count {
+  font-size:36px;
+  font-weight:600;
+}
+
+#circle {
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  background:radial-gradient(circle at top,#6fa3ff,#2b5cff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  cursor:pointer;
+  transition:transform .4s ease;
+  position:relative;
+}
+
+/* PARTICLES */
+.particle {
+  position:absolute;
+  pointer-events:none;
+  color:white;
+  font-size:14px;
+  opacity:1;
+  animation: float 0.8s forwards;
+}
+
+@keyframes float {
+  to {
+    transform:translateY(-40px);
+    opacity:0;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="shop">
+  <h2>Shop</h2>
+
+  <div class="upgrade" onclick="buyAuto()">
+    Auto Clicker
+    <small>+0.5 per second</small>
+    <small id="autoCost"></small>
+  </div>
+
+  <div class="upgrade" onclick="buyMulti()">
+    Click Multiplier
+    <small>+1 per click</small>
+    <small id="multiCost"></small>
+  </div>
+
+  <div class="upgrade" onclick="buyFaster()">
+    Faster Autos
+    <small>Auto speed +20%</small>
+    <small id="speedCost"></small>
+  </div>
+
+  <div class="upgrade" onclick="buyPulse()">
+    Pulse Boost
+    <small>+5 per click</small>
+    <small id="pulseCost"></small>
+  </div>
+
+  <div class="upgrade" onclick="buyCrit()">
+    Critical Clicks
+    <small>Chance to double click value</small>
+    <small id="critCost"></small>
+  </div>
+
+  <div class="upgrade" onclick="prestige()">
+    Prestige
+    <small>Reset for permanent bonus</small>
+  </div>
+</div>
+
+<div id="game">
+  <div id="count">0</div>
+  <div id="circle">CLICK</div>
+</div>
+
+<script>
+let points=0, perClick=1, autoRate=0.5, autoSpeed=1000;
+let pulseBonus=0, critChance=0, prestigeBonus=1;
+
+let autoCost=20, multiCost=50, speedCost=120, pulseCost=250, critCost=400;
+
+const countEl=document.getElementById("count");
+const circle=document.getElementById("circle");
+
+/* LOAD */
+if(localStorage.save){
+  Object.assign(window,JSON.parse(localStorage.save));
+}
+
+function save(){
+  localStorage.save=JSON.stringify({
+    points,perClick,autoRate,autoSpeed,
+    pulseBonus,critChance,prestigeBonus,
+    autoCost,multiCost,speedCost,pulseCost,critCost
+  });
+}
+
+function update(){
+  countEl.textContent=Math.floor(points);
+  autoCostEl.textContent="Cost: "+autoCost;
+  multiCostEl.textContent="Cost: "+multiCost;
+  speedCostEl.textContent="Cost: "+speedCost;
+  pulseCostEl.textContent="Cost: "+pulseCost;
+  critCostEl.textContent="Cost: "+critCost;
+  save();
+}
+
+circle.onclick=e=>{
+  let gain=(perClick+pulseBonus)*prestigeBonus;
+  if(Math.random()<critChance) gain*=2;
+  points+=gain;
+  animateCircle();
+  particle("+"+Math.floor(gain),e.clientX,e.clientY);
+  update();
+};
+
+function animateCircle(){
+  circle.style.transform="scale(1.15)";
+  setTimeout(()=>{
+    circle.style.transform="scale(1)";
+    setTimeout(()=>{
+      circle.style.transform="scale(1.2)";
+      setTimeout(()=>circle.style.transform="scale(1)",400);
+    },50);
+  },400);
+}
+
+function particle(text,x,y){
+  const p=document.createElement("div");
+  p.className="particle";
+  p.textContent=text;
+  p.style.left=x+"px";
+  p.style.top=y+"px";
+  document.body.appendChild(p);
+  setTimeout(()=>p.remove(),800);
+}
+
+/* AUTO LOOP */
+let autoLoop=setInterval(()=>{
+  points+=autoRate*prestigeBonus;
+  update();
+},autoSpeed);
+
+/* UPGRADES */
+function buyAuto(){
+  if(points<autoCost)return;
+  points-=autoCost;
+  autoRate+=0.5;
+  autoCost=Math.floor(autoCost*1.6);
+  update();
+}
+
+function buyMulti(){
+  if(points<multiCost)return;
+  points-=multiCost;
+  perClick++;
+  multiCost=Math.floor(multiCost*1.7);
+  update();
+}
+
+function buyFaster(){
+  if(points<speedCost)return;
+  points-=speedCost;
+  autoSpeed*=0.8;
+  clearInterval(autoLoop);
+  autoLoop=setInterval(()=>{
+    points+=autoRate*prestigeBonus;
+    update();
+  },autoSpeed);
+  speedCost=Math.floor(speedCost*1.8);
+  update();
+}
+
+function buyPulse(){
+  if(points<pulseCost)return;
+  points-=pulseCost;
+  pulseBonus+=5;
+  pulseCost=Math.floor(pulseCost*2);
+  update();
+}
+
+function buyCrit(){
+  if(points<critCost)return;
+  points-=critCost;
+  critChance+=0.05;
+  critCost=Math.floor(critCost*2);
+  update();
+}
+
+/* PRESTIGE */
+function prestige(){
+  if(points<1000)return;
+  prestigeBonus+=0.5;
+  points=0;
+  perClick=1;
+  autoRate=0.5;
+  pulseBonus=0;
+  critChance=0;
+  autoSpeed=1000;
+  update();
+}
+
+update();
+</script>
+</body>
+</html>
